@@ -1,0 +1,15 @@
+
+#list-box{
+	position:absolute;
+	width:200px;
+}
+#list-box ul{
+	display:inline;
+}
+#map-canvas{
+	position:absolute;
+}
+#selectedItineraryName{
+	border:0px;
+	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}

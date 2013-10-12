@@ -1,0 +1,198 @@
+<html ng-app="mapapp" ng-controller="Itineraries">
+	<head>
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<title><%= getVar("title") %></title>
+		<link rel='stylesheet' href='/stylesheets/style.css' />		
+		<link rel='stylesheet' href='/stylesheets/mapapp.css' />
+		<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+		<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi_V0oQNiR1JVEBSkM-EnvQ_rxZFEvOVg&sensor=true"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
+		<script src="javascripts/mapapp.js"></script>
+		<script>
+			var mapapp = angular.module("mapapp",[]);
+			mapapp.factory("json",function($http){
+				return{
+					saveItinerary:function(it,callback){
+						var itinerary = new Itinerary(it);
+						
+						$http.post("/saveit.js",{"it":itinerary}).success(function(obj){
+							alert(obj);
+						});
+					}
+				}
+			});
+					
+			mapapp.controller("Itineraries",function Itineraries($scope,json){
+				$scope.itineraries=itineraries;
+				$scope.selectedItinerary=new Itinerary("unnamed");
+				$scope.findLocation = function(){
+					geocoder.geocode({"address":this.address},function(results,status){
+						if(results.length>1){
+							var $d=$("#didyoumean");
+							$d.html("<div>Did you mean...</div>");
+							$(results).each(function(){
+								var title=this.formatted_address
+								$("<div/>").appendTo($d).text(title).data("marker",this).click(function(){
+									var $this=$(this);
+									$scope.selectMarker(this);
+								});
+							});
+							$d.dialog();
+						}else{
+							$scope.selectMarker(results[0]);
+						}
+						
+					});
+				};
+				
+				$scope.selectItinerary=function(){
+					var markers=$scope.selectedItinerary.markers;
+					if(markers){
+						for(var i=0;i<markers.length;i++){
+							markers[i].setMap(null);
+						}
+					}
+					$scope.selectedItinerary=this.it;
+					var markers=$scope.selectedItinerary.markers;
+					if(markers){
+						var map = window.map
+						var bounds=new google.maps.LatLngBounds();
+						for(var i=0;i<markers.length;i++){
+							var m=markers[i];
+							if(m.position){//this means it is a screen marker
+								m.setMap(map);
+							}else{//this means it is a marker from the db
+								var myLatlng=new google.maps.LatLng(m.lat, m.lon);
+								markers[i]=$scope.setMarker(myLatlng,m.name);
+							}
+							bounds.extend(markers[i].position);
+						}
+						map.fitBounds(bounds);
+						
+					}
+				}
+				$scope.selectMarker=function(m){
+					if(!$scope.selectedItinerary.markers){
+						$scope.selectedItinerary.markers=[]
+					}
+					$scope.selectedItinerary.markers.push($scope.setMarker(m.geometry.location,m.formatted_address));
+					$scope.$apply(function(){
+						json.saveItinerary($scope.selectedItinerary,function(d){alert("hey");});
+					});
+				}
+				$scope.setMarker=function(location,title){
+					map.setCenter(location);
+					var marker = new google.maps.Marker({
+						position:location,
+						map:map,
+						title:title
+					}) 
+					/*
+					var bounds=new google.maps.LatLngBounds();
+					for(var i=0;i<markers.length;i++){
+						bounds.extend(markers[i].position);
+					}
+					map.fitBounds(bounds);
+					*/
+					return marker;
+				}
+				$scope.saveSelectedItinerary=function(){
+					json.saveItinerary($scope.selectedItinerary);
+				}
+				
+			});
+			
+			var myPosition=null;
+			var gecoder;
+			var map;
+			//var selectedItinerary=new Itinerary("unnamed");
+			var selectedMarker;
+			$(document).ready(function(){
+				handleResize();
+				geocoder = new google.maps.Geocoder();
+				if(navigator.geolocation){
+					navigator.geolocation.getCurrentPosition(function(p){
+						myPosition=p;
+						initializeMap(p);
+					});
+				}else{
+					initializeMap({coords:{latitude:"",longitude:""}});
+				}
+			})
+			function initializeMap(position){
+				var myLatlng=new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+				var mapOptions = {
+				      center: myLatlng,
+				      zoom: 8,
+				      mapTypeId: google.maps.MapTypeId.ROADMAP
+				    };
+				var $map = $("#map-canvas")
+				map = new google.maps.Map($map[0],mapOptions);
+				
+				var marker = new google.maps.Marker({
+					position:myLatlng,
+					map:map,
+					title:"Here you are!"
+				})
+			}
+			function handleResize(){
+				var $body=$("body");
+				var $list=$("#list-box");
+				
+				var $map=$("#map-canvas");
+				
+				var pw=$body.width()-20;
+				var ph=$body.height()-$map.position().top;
+				
+				var mw=pw - 10 - ($list.position().left+$list.width());
+				
+				$list.css({height:ph});
+				$map.css({height:ph,width:mw,left:$list.position().left+5+$list.width()});
+			}
+			
+		</script>
+	</head>
+	<body>
+		<div>
+			<label>Itinerary:</label>
+			<input type="text" ng-model="itineraryName" placeholder="Enter an itinerary name here"/>
+			
+			<form name="locationSearch" ng-submit="findLocation()" style="display:inline">
+				<label style="padding-left:50px;">Find Location:
+					<input type="text" ng-model="address" placeholder="Enter an address, city, state, country, etc."></input>
+				</label>
+				<input type="submit" style="display:none"/>
+			</form>
+			<input id="selectedItineraryName" type="text" ng-blur="saveSelectedItinerary()" ng-model="selectedItinerary.name"/><input type="button" ngClick="saveItinerary()"/>
+			<hr/>
+		</div>
+		<script>
+			<%if(hasVar("itineraries")){%>			
+				var itineraries=<%-JSON.stringify(itineraries) %>;		
+			<%}else{%>
+				var itineraries=[];
+			<%}%>
+		</script>
+		
+		<ul>
+			<li ng-repeat="m in selectedItinerary.markers">
+				{{m.name}}
+			</li>
+		</ul>
+		<div id="list-box">
+			<ul>
+				<li ng-repeat="it in itineraries | filter:itineraryName" id="it_{{it._id}}" ng-click="selectItinerary()">
+					{{it.name}}
+					<ul style="display:none">
+						<li ng-repeat="marker in it.markers">
+							{{marker.title}}
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+		<div id="map-canvas"></div>
+	</body>
+</html>
