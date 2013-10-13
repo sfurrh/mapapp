@@ -26,15 +26,18 @@ Itinerary.prototype.fields=["created","_id","name"];
 
 function Marker(obj,lat,lon,address){
 	if(typeof obj == "object"){
-		this.name=obj.title;
-		this.lat=obj.position.lat();
-		this.lng=obj.position.lng();
+		this.title=obj.title;
+		if(obj.position){
+			this.position={lat:obj.position.lat(),lng:obj.position.lng()};
+		}else{
+			this.position={lat:obj.lat,lng:obj.lng};
+		}
 		this.date=obj.date;
 		this.address=obj.address;
 	}else{
-		this.name=name;
+		this.title=name;
 		this.lat=lat;
-		this.lon=lon;
+		this.lng=lon;
 		this.address=address;
 		this.date="";
 	}

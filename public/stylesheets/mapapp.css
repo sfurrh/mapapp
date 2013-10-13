@@ -13,3 +13,9 @@
 	border:0px;
 	font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
+.dym_marker{
+	cursor:pointer;
+	border-radius:4px;
+	border:1px solid #cccccc;
+	
+}

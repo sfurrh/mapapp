@@ -35,6 +35,8 @@ app.get('/h', routes.helloworld);
 app.get('/i', routes.getItineraries);
 app.get('/saveit.js',routes.saveItinerary);
 app.post('/saveit.js',routes.saveItinerary);
+app.post('/removeit.js',routes.removeItinerary);
+app.get('/removeit.js',routes.removeItinerary);
 app.get('/users', user.list);
 
 http.createServer(app).listen(app.get('port'), function(){

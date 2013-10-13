@@ -8,6 +8,7 @@ var moment = require('moment');
 var stringify = require('json-stringify-safe');
 
 var db=require("./mongoModel.js");
+var ObjectId = db.ObjectId;
 
 /*
  * GET home page.
@@ -50,24 +51,37 @@ exports.index = function(req, res){
 	res.render('index', o);
 };
 exports.saveItinerary = function(req,res){
-console.log(req.query.it);
 	var it;
 	if(req.query.it){
 		it=JSON.parse(req.query.it);
 	}else{
 		it=req.body.it;
 	}
-console.log("it="+stringify(it));
-	
-	console.log(it+"name="+it.name);
 	if(!it._id){
 		it["created"]=moment().format("YYYYMMDDHHmmssSSS");
 	}
 	it["modified"]=moment().format("YYYYMMDDHHmmssSSS");
-	console.log(stringify(it,null,2));
 	db.itineraries.save(it,function(err,saved){
-		res.render("json",{error:err,itinerary:saved});
+		var out=stringify({error:err,itinerary:saved});
+		res.end(out);
 	});
+}
+exports.removeItinerary = function(req,res){
+	var it;
+	if(req.query.it){
+		it=JSON.parse(req.query.it);
+	}else{
+		it=req.body.it;
+	}
+	console.log(stringify(it));
+	console.log("id="+it._id);
+	if(it._id){
+		db.itineraries.remove({"_id":ObjectId(it._id)},function(err){
+			var out=stringify({error:err});			
+			res.end(out);
+		});
+	}
+	
 }
 exports.helloworld = function(req, res){
 	var o=getResponseObject();
